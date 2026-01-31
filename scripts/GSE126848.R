@@ -305,3 +305,4 @@ gsea_result <- GSEA(
 
 nrf2_ranks <- gene_ranks[names(gene_ranks) %in% nrf2_sets$gene]
 sort(nrf2_ranks, decreasing = TRUE)
+
