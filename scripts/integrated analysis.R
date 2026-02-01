@@ -1,7 +1,8 @@
+# load packages
+library(tidyverse)  # dplyr, tidyr, ggplot2, etc.
 library(biomaRt)
-library(dplyr)
-library(tidyr)
-library(ggplot2)
+library(DESeq2)
+
 
 # integrated analysis of dataset 1 and dataset 2
 # find common genes between dataset 1 and 2
@@ -42,6 +43,7 @@ meta_merged <- bind_rows(
 )
 rownames(meta_merged) <- colnames(counts_merged)
 
+# create DESeq2 dataset
 dds <- DESeqDataSetFromMatrix(
   countData = counts_merged,
   colData   = meta_merged,
@@ -61,13 +63,8 @@ res_NASH_vs_Control <- results(
   contrast = c("condition", "NASH", "Control")
 )
 
-# NFE2L2
-res_NAFL_vs_Control["ENSG00000116044", ]
-res_NASH_vs_Control["ENSG00000116044", ]
 
-
-# individual genes
-# ------ get single gene results
+# ----- create function to subset nrf2 target genes
 extract_nrf2_results <- function(res_df, nrf2_genes) {
   
   gene_symbols <- mapIds(
@@ -89,13 +86,14 @@ extract_nrf2_results <- function(res_df, nrf2_genes) {
   return(res_sub)
 }
 
-# optional individual gene comparison for obeese
+# Run
 nrf2_nafld  <- extract_nrf2_results(res_NAFL_vs_Control, nrf2_genes)
 nrf2_nash   <- extract_nrf2_results(res_NASH_vs_Control,  nrf2_genes)
 
 nrf2_nafld <- nrf2_nafld[nrf2_genes, ]
 nrf2_nash <- nrf2_nash[nrf2_genes, ]
 
+# export reults
 write.csv(nrf2_nafld,
           file = "Dataset1_and_2_pooled_results_NAFL.csv",
           row.names = TRUE)
@@ -247,3 +245,4 @@ ggplot(hmox_df, aes(x = group_plot, y = expression)) +
     axis.text.x = element_text(angle = 45, hjust = 1),
     plot.title = element_text(hjust = 0.5)
   )
+
