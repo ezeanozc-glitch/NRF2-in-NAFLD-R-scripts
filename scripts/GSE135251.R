@@ -1,11 +1,8 @@
-rm(list=ls())
-
-library(readr)
+# load libraries
 library(tidyverse)
 library(GEOquery)
 library(DESeq2)
 library(org.Hs.eg.db)
-library(dplyr)
 library(clusterProfiler)
 
 
@@ -27,41 +24,36 @@ count_matrix_2 <- purrr::reduce(count_list, dplyr::full_join, by="Gene")
 rownames(count_matrix_2) <- count_matrix_2$Gene
 count_matrix_2 <- count_matrix_2[,-1]
 
-# Convert dataframe which can contain different types of data to a matrix that can only contain one type
+# Convert dataframe to a matrix
 count_matrix_2 <- as.matrix(count_matrix_2)
 
 # Convert to integer matrix
 mode(count_matrix_2) <- "integer"
 
-# Quick check
-head(count_matrix_2[,1:5])
-
 # stripping uneccessary text
 colnames(count_matrix_2) <- gsub("\\.counts\\.txt$", "", colnames(count_matrix_2))
 colnames(count_matrix_2) <- gsub("(_.*)", "", colnames(count_matrix_2))  # optional: keep only GSM ID
 
+# load metadata
 gse2 <- getGEO("GSE135251", GSEMatrix = TRUE)
 pheno2 <- pData(phenoData(gse2[[1]]))
 head(pheno2)
 
-# show the columns in the metadata
-colnames(pheno2)
-
-# check if the sample IDs in the column names fo the count matrix matches the GEO accession values in the pheno metadata
-all(colnames(count_matrix_2) %in% pheno2$geo_accession)
-
-
 # subset data
 pheno2 <- pheno2[match(colnames(count_matrix_2), pheno2$geo_accession), ]
 
-# change the disease:ch1 column to disease to remove the ":" because it interferes wiht parsing in DESeq2 code ran below
+# check if the sample IDs in the column names of the count matrix matches the GEO accession values in the pheno metadata
+all(colnames(count_matrix_2) %in% pheno2$geo_accession)
+
+
+# remove symbols
 colnames(pheno2)[colnames(pheno2) == "disease:ch1"] <- "disease"
 colnames(pheno2)[colnames(pheno2) == "fibrosis stage:ch1"] <- "fibrosis_stage"
 colnames(pheno2)[colnames(pheno2) == "group in paper:ch1"] <- "group_in_paper"
 colnames(pheno2)[colnames(pheno2) == "nas score:ch1"] <- "nas_score"
 colnames(pheno2)[colnames(pheno2) == "Stage:ch1"] <- "Stage"
 
-# get the different types of names int he disease.ch1 column of the pheno metadata
+# view contents
 unique(pheno2$disease)
 unique(pheno2$fibrosis_stage)
 unique(pheno2$group_in_paper)
@@ -69,7 +61,6 @@ unique(pheno2$nas_score)
 unique(pheno2$Stage)
 
 
-# compare subgroups
 # create column
 pheno2$group_simple <- pheno2$group_in_paper
 
@@ -80,79 +71,21 @@ pheno2$group_simple <- recode(pheno2$group_simple, "control" = "Control")
 unique(pheno2$group_simple)
 
 
-
+# DESeq2 object
 dds <- DESeqDataSetFromMatrix(
   countData = count_matrix,
-  colData   = pheno,
+  colData   = pheno2,
   design    = ~ group_simple   # your grouping variable
 )
 
+# run differential expression analysis
 dds <- DESeq(dds)
 res_NAFL <- results(dds, contrast = c("group_simple", "NAFL", "Control"))
 res_NASH <- results(dds, contrast = c("group_simple", "NASH", "Control"))
 
-res_NAFL["ENSG00000116044", ]
-res_NASH["ENSG00000116044", ]
-
-# HMOX1
-res_NAFL["ENSG00000100292", ]
-res_NASH["ENSG00000100292", ]
-
-# SLC7A11
-res_NAFL["ENSG00000151012", ]
-res_NASH["ENSG00000151012", ]
-# GPX4
-res_NAFL["ENSG00000167468", ]
-res_NASH["ENSG00000167468", ]
-
-# FTH1
-res_NAFL["ENSG00000167996", ]
-res_NASH["ENSG00000167996", ]
-# FTL
-res_NAFL["ENSG00000087086", ]
-res_NASH["ENSG00000087086", ]
-# LOX
-res_NAFL["ENSG00000113083", ]
-res_NASH["ENSG00000113083", ]
-# ACSL4
-res_NAFL["ENSG00000068366", ]
-res_NASH["ENSG00000068366", ]
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-# GSTA1
-res_NAFL["ENSG00000243955", ]
-res_NASH["ENSG00000243955", ]
-# GSTA2
-res_NAFL["ENSG00000244067", ]
-res_NASH["ENSG00000244067", ]
-# GSTM1
-res_NAFL["ENSG00000134184", ]
-res_NASH["ENSG00000134184", ]
-# GSTM3
-res_NAFL["ENSG00000134202", ]
-res_NASH["ENSG00000134202", ]
-# GSTM4
-res_NAFL["ENSG00000168765", ]
-res_NASH["ENSG00000168765", ]
-
-
-j
-
-
-
+# create DESeq2
 dds2 <- DESeqDataSetFromMatrix(
   countData = count_matrix_2,
   colData   = pheno2,
@@ -160,8 +93,6 @@ dds2 <- DESeqDataSetFromMatrix(
 )
 
 dds2 <- DESeq(dds2)
-
-
 res_NAFL <- results(dds2, contrast = c("group_in_paper", "NAFL", "control"))
 res_F0F1 <- results(dds2, contrast = c("group_in_paper", "NASH_F0-F1", "control"))
 res_F2   <- results(dds2, contrast = c("group_in_paper", "NASH_F2", "control"))
@@ -169,78 +100,11 @@ res_F3   <- results(dds2, contrast = c("group_in_paper", "NASH_F3", "control"))
 res_F4   <- results(dds2, contrast = c("group_in_paper", "NASH_F4", "control"))
 
 
-# SREBF target genes
-srebp1_ensembl <- c(
-  "ENSG00000169710",  # FASN
-  "ENSG00000168477",  # SCD
-  "ENSG00000196924",  # DGAT1
-  "ENSG00000133136"   # DGAT2
-)
-
-
-res_NAFL[srebp1_ensembl, ]
-res_F0F1[srebp1_ensembl, ]
-res_F2[srebp1_ensembl, ]
-res_F3[srebp1_ensembl, ]
-res_F4[srebp1_ensembl, ]
-
-
-# SREBP
-res_NAFL["ENSG00000072310", ]
-res_F0F1["ENSG00000072310", ]
-res_F2["ENSG00000072310", ]
-res_F3["ENSG00000072310", ]
-res_F4["ENSG00000072310", ]
-
-# ChREBP
-res_NAFL["ENSG00000009950", ]
-res_F0F1["ENSG00000009950", ]
-res_F2["ENSG00000009950", ]
-res_F3["ENSG00000009950", ]
-res_F4["ENSG00000009950", ]
-
-
-# check high activity NASH vs low activity NASH
-# Convert NAS score to numeric
-pheno$nas_score <- as.numeric(pheno$nas_score)
 
 
 
 
-
-
-# Subset only NASH samples
-pheno_nash <- pheno[pheno$group_simple == "NASH", ]
-
-# Create high-activity (NAS >= 6) and low-activity (NAS <= 4) groups
-pheno_nash$activity_group <- NA
-pheno_nash$activity_group[pheno_nash$nas_score >= 6] <- "NASH_high_activity"
-pheno_nash$activity_group[pheno_nash$nas_score <= 4] <- "NASH_low_activity"
-
-# Remove samples that don't fall into either group (NAS = 5)
-pheno_nash <- pheno_nash[!is.na(pheno_nash$activity_group), ]
-
-table(pheno_nash$activity_group)
-
-# Keep only columns (samples) that are in pheno_nash
-count_nash <- count_matrix[, pheno_nash$geo_accession]
-
-all(colnames(count_nash) == pheno_nash$geo_accession)
-
-pheno_nash$activity_group <- factor(pheno_nash$activity_group,
-                                    levels = c("NASH_low_activity", "NASH_high_activity"))
-
-dds <- DESeqDataSetFromMatrix(
-  countData = count_nash,
-  colData = pheno_nash,
-  design = ~ activity_group
-)
-
-dds <- DESeq(dds)
-res_high_activity_vs_low_activity <- results(dds, contrast = c("activity_group", "NASH_high_activity", "NASH_low_activity"))
- 
-
-# compare stage
+# compare stages
 dds_stage <- DESeqDataSetFromMatrix(
   countData = count_matrix,
   colData   = pheno,
@@ -255,106 +119,9 @@ res_moderate_vs_control <- results(dds_stage, contrast = c("Stage", "moderate", 
 res_early_vs_control["ENSG00000116044", ]
 res_moderate_vs_control["ENSG00000116044", ]
 
-# create nrf2 gene set
-nrf2_genes <- c(
-  "GCLM","SRXN1","GCLC","GSR","NQO1","SLC7A11",
-  "AKR1C3","ME1","FTH1","FTL","OSGIN1","EPHX1",
-  "PIR","ABHD4"
-)
-
-# ROS and Xenobiotic Detoxification
-ros_detox_genes <- c(
-  "NQO1",
-  "PTGR1",
-  "CYP2A6",
-  "GSTA1", "GSTA2", "GSTA3", "GSTA5",
-  "GSTP1", "GSTM1", "GSTM3", "MGST1",
-  "UGT1A1", "UGT1A4", "UGT1A8", "UGT1A10",
-  "CES1", "CBR1", "CBR3",
-  "PRDX6", "PRDX1"
-)
 
 
-# GSH Production and Regeneration
-GSH_genes <- c("GCLC", "GCLM", "GSR", "SLC7A11")
-
-# Heme and Iron Metabolism
-heme_genes <- c("FTL", "FTH1", "HMOX1")
-
-# NADPH Regeneration
-nadph_genes <- c("G6PD", "PGD", "TKT", "TALDO1", "ME1", "IDH1")
-
-# Thioredoxin System
-thioredoxin_genes <- c("TXN", "SRXN1", "TXNRD1")
-
-# combine all the objects into a single vector
-nrf2_genes <- c(
-  ros_detox_genes,
-  GSH_genes,
-  heme_genes,
-  nadph_genes,
-  thioredoxin_genes
-)
-
-nrf2_sets <- data.frame(
-  term = rep("NRF2_core", length(nrf2_genes)),
-  gene = nrf2_genes
-)
-
-
-# create function
-run_gsea_nrf2_custom <- function(res_df, nrf2_sets_df) {
-  
-  # convert rownames(ENSEMBL) → SYMBOL
-  gene_symbols <- mapIds(
-    org.Hs.eg.db,
-    keys = rownames(res_df),
-    column = "SYMBOL",
-    keytype = "ENSEMBL",
-    multiVals = "first"
-  )
-  
-  # attach SYMBOLs to res_df
-  res_df$symbol <- gene_symbols
-  
-  # remove NA symbols
-  res_df <- res_df[!is.na(res_df$symbol), ]
-  
-  # rank by log2FC using SYMBOL as names
-  res_ranked <- res_df[order(res_df$log2FoldChange, decreasing = TRUE), ]
-  gene_ranks <- res_ranked$log2FoldChange
-  names(gene_ranks) <- res_ranked$symbol
-  
-  # remove duplicates (same symbol) keep max logFC
-  gene_ranks <- tapply(gene_ranks, names(gene_ranks), max) |> sort(decreasing = TRUE)
-  
-  # print overlap
-  overlap_genes <- intersect(names(gene_ranks), nrf2_sets_df$gene)
-  cat("Number of overlapping genes:", length(overlap_genes), "\n")
-  print(overlap_genes)
-  
-  # run GSEA
-  gsea_result <- GSEA(
-    geneList = gene_ranks,
-    TERM2GENE = nrf2_sets_df,
-    minGSSize = 5,
-    maxGSSize = 500,
-    pvalueCutoff = 0.05,
-    verbose = FALSE
-  )
-  
-  return(gsea_result)
-}
-
-
-# run gsea
-gsea_NAFL     <- run_gsea_nrf2_custom(res_NAFL, nrf2_sets)
-gsea_NASH     <- run_gsea_nrf2_custom(res_NASH, nrf2_sets)
-
-
-
-# check individual genes
-# check individual gene results
+# create function to subset nrf2 target genes
 extract_nrf2_results <- function(res_df, nrf2_genes) {
   
   # map ENSEMBL rownames → SYMBOL temporarily
@@ -380,6 +147,7 @@ extract_nrf2_results <- function(res_df, nrf2_genes) {
   return(res_sub)
 }
 
+# run
 nrf2_NAFL <- extract_nrf2_results(res_NAFL, nrf2_genes)
 nrf2_NASH <- extract_nrf2_results(res_NASH, nrf2_genes)
 
@@ -387,7 +155,7 @@ nrf2_NAFL <- nrf2_NAFL[nrf2_genes, ]
 nrf2_NASH <- nrf2_NASH[nrf2_genes, ]
 
 
-rm(list=ls())
+# export results
 write.csv(nrf2_NAFL,
           file = "Sally_GSE135251_nrf2_NAFL_results.csv",
           row.names = TRUE)
@@ -727,6 +495,7 @@ intersect(names(gene_ranks), nrf2_sets$gene)
 nrf2_ranks <- gene_ranks[names(gene_ranks) %in% nrf2_sets$gene]
 sort(nrf2_ranks, decreasing = TRUE)
 # nrf2 pathway may nto have showed up as statistically significant due to there being genes in the pathway that were strongly upregulated vs genes in th epathway that were weakly upregulated so at the pathway level there wasnt upregulation or downregulation
+
 
 
 
