@@ -1,19 +1,12 @@
+# load packages
 library(oligo)
 library(hugene11sttranscriptcluster.db)
 library(GEOquery)
 library(limma)
-library(dplyr)
 library(AnnotationDbi)
-library(ggplot2)
-library(tidyr)
+library(tidyverse)                         # dplyr, tidyr, ggplot2
 
-
-GSE48452
-GSE164760  
-GSE89632
-GSE66676 
-
-
+# load metadata
 gse <- getGEO("GSE48452", GSEMatrix = TRUE)
 pheno <- pData(phenoData(gse[[1]]))
 head(pheno)
@@ -41,6 +34,7 @@ pheno_samples <- rownames(pheno)
 # check if they are identical and in the same order
 all(exprs_samples == pheno_samples)
 
+# remove symbols
 colnames(pheno)[colnames(pheno) == "group:ch1"] <- "group"
 colnames(pheno)[colnames(pheno) == "fat:ch1"] <- "fat"
 colnames(pheno)[colnames(pheno) == "inflammation:ch1"] <- "inflammation"
@@ -103,28 +97,7 @@ res_HealthyObese_clean <- res_HealthyObese[!is.na(res_HealthyObese$SYMBOL), ]
 res_Steatosis_clean    <- res_Steatosis[!is.na(res_Steatosis$SYMBOL), ]
 res_Nash_clean <- res_Nash[!is.na(res_Nash$SYMBOL), ]
 
-res_HealthyObese_clean[res_HealthyObese_clean$SYMBOL == "NFE2L2", ]
-res_Steatosis_clean[res_Steatosis_clean$SYMBOL == "NFE2L2", ]
-res_Nash_clean[res_Nash_clean$SYMBOL == "NFE2L2", ]
-
-# SREBF1
-res_HealthyObese_clean[res_HealthyObese_clean$SYMBOL == "SREBF1", ]
-res_Steatosis_clean[res_Steatosis_clean$SYMBOL == "SREBF1", ]
-res_Nash_clean[res_Nash_clean$SYMBOL == "SREBF1", ]
-
-srebp1_targets <- c("FASN", "ACACA", "SCD", "ELOVL6", "DGAT1", "DGAT2")
-
-res_HealthyObese_clean[res_HealthyObese_clean$SYMBOL %in% srebp1_targets, ]
-res_Steatosis_clean[res_Steatosis_clean$SYMBOL %in% srebp1_targets, ]
-res_Nash_clean[res_Nash_clean$SYMBOL %in% srebp1_targets, ]
-
-# check NRF2 changes
-res_HealthyObese_clean[res_HealthyObese_clean$SYMBOL == "NFE2L2", ]
-res_Steatosis_clean[res_Steatosis_clean$SYMBOL == "NFE2L2", ]
-res_Nash_clean[res_Nash_clean$SYMBOL == "NFE2L2", ]
-
-
-# check results for individual genes
+# create function to subset nrf2 target genes
 extract_nrf2_results <- function(res_df, nrf2_genes) {
   # Subset rows matching NRF2-related genes
   res_sub <- res_df[res_df$SYMBOL %in% nrf2_genes, ]
@@ -145,11 +118,12 @@ extract_nrf2_results <- function(res_df, nrf2_genes) {
   return(res_sub)
 }
 
+# run
 nrf2_HealthyObese <- extract_nrf2_results(res_HealthyObese_clean, nrf2_genes)
 nrf2_Steatosis    <- extract_nrf2_results(res_Steatosis_clean, nrf2_genes)
 nrf2_Nash  <- extract_nrf2_results(res_Nash_clean, nrf2_genes)
 
-#reorder NRF2 results
+# reorder NRF2 results
 nrf2_HealthyObese_ordered <-
   nrf2_HealthyObese[match(nrf2_genes, nrf2_HealthyObese$SYMBOL), ]
 
@@ -290,7 +264,7 @@ cor_results$Adj_P_value <- p.adjust(cor_results$P_value, method = "BH")
 
 head(cor_results)
 
-
+# export results
 write.csv(
   cor_results,
   file = "NRF2_gene_clinical_score_correlations.csv",
@@ -306,6 +280,8 @@ write.csv(
 #--------- create graphs with single gene multiple pannels and dots
 gene <- "ME1"
 
+# make sure gene is in nrf2_genes
+nrf2_genes <- "NFE2L2"
 gene <- "NFE2L2"
 
 
@@ -342,11 +318,7 @@ ggplot(df_long, aes(x = Value, y = Expression)) +
 genes_to_plot <- c("GSTA1", "GSTA2", "GSTA3", "GSTA5",
                     "GSTM1", "GSTM3")
 
-genes_to_plot <- c("FTL", "FTH1", "HMOX1")
-
-genes_to_plot <- c("G6PD", "PGD", "TKT", "TALDO1",
-                   "ME1", "IDH1")
-
+# make sure gene is in nrf2 genes if not currently
 genes_to_plot <- c("NFE2L2")
 nrf2_genes <- c("NFE2L2")
 
@@ -380,6 +352,7 @@ ggplot(df_long, aes(x = Value, y = Expression, color = Gene)) +
     y = "Gene expression",
     color = "Gene"
   )
+
 
 
 
