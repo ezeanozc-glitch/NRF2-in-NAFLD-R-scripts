@@ -66,6 +66,40 @@ res_nafld_vs_healthy <- results(dds, contrast = c("disease", "NAFLD", "healthy")
 res_nash_vs_healthy <- results(dds, contrast = c("disease", "NASH", "healthy"))
 
 
+# ROS and Xenobiotic Detoxification
+ros_detox_genes <- c(
+  "NQO1",
+  "PTGR1",
+  "CYP2A6",
+  "GSTA1", "GSTA2", "GSTA3", "GSTA5",
+  "GSTP1", "GSTM1", "GSTM3", "MGST1",
+  "UGT1A1", "UGT1A4", "UGT1A8", "UGT1A10",
+  "CES1", "CBR1", "CBR3",
+  "PRDX6", "PRDX1"
+)
+
+
+# GSH Production and Regeneration
+GSH_genes <- c("GCLC", "GCLM", "GSR", "SLC7A11")
+
+# Heme and Iron Metabolism
+heme_genes <- c("FTL", "FTH1", "HMOX1")
+
+# NADPH Regeneration
+nadph_genes <- c("G6PD", "PGD", "TKT", "TALDO1", "ME1", "IDH1")
+
+# Thioredoxin System
+thioredoxin_genes <- c("TXN", "SRXN1", "TXNRD1")
+
+# combine all the objects into a single vector
+nrf2_genes <- c(
+  ros_detox_genes,
+  GSH_genes,
+  heme_genes,
+  nadph_genes,
+  thioredoxin_genes
+)
+
 
 # ------ create function to subset for nrf2 target genes
 extract_nrf2_results <- function(res_df, nrf2_genes) {
@@ -111,5 +145,6 @@ write.csv(nrf2_nafld,
 write.csv(nrf2_nash,
           file = "GSE126848_nrf2_nash",
           row.names = TRUE)
+
 
 
