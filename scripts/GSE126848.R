@@ -135,16 +135,17 @@ nrf2_nash <- nrf2_nash[nrf2_genes, ]
 
 # export results
 write.csv(nrf2_obese,
-          file = "GSE126848_nrf2_obese",
+          file = "GSE126848_nrf2_obese.csv",
           row.names = TRUE)
 
 write.csv(nrf2_nafld,
-          file = "GSE126848_nrf2_nafld",
+          file = "GSE126848_nrf2_nafld.csv",
           row.names = TRUE)
 
 write.csv(nrf2_nash,
-          file = "GSE126848_nrf2_nash",
+          file = "GSE126848_nrf2_nash.csv",
           row.names = TRUE)
+
 
 
 
