@@ -1,0 +1,5 @@
+"ID","Description","GeneRatio","BgRatio","pvalue","p.adjust","Count","geneSymbols"
+"GO:0035092","sperm DNA condensation","1/3","18/28891",0.00186799453689113,0.0104033303157195,1,"Prm1"
+"GO:0007289","spermatid nucleus differentiation","1/3","32/28891",0.00331926981534114,0.0104033303157195,1,"Prm1"
+"GO:0030261","chromosome condensation","1/3","43/28891",0.00445857013530837,0.0104033303157195,1,"Prm1"
+"GO:0006997","nucleus organization","1/3","142/28891",0.0146732280243732,0.0256781490426531,1,"Prm1"
